@@ -1,1 +1,199 @@
-Kirtoxa License Admin - UI placeholder
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kirtoxa License Admin</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f5f5f5;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 2rem;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #9b59b6;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background-color: #1e1e1e;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 0 20px rgba(155, 89, 182, 0.4);
+    }
+    input, button {
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 1rem;
+      border: none;
+      border-radius: 0.5rem;
+    }
+    input {
+      background-color: #2c2c2c;
+      color: white;
+    }
+    button {
+      background-color: #9b59b6;
+      color: white;
+      cursor: pointer;
+    }
+    .status {
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+    .hidden {
+      display: none;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.5rem;
+      border: 1px solid #333;
+      text-align: left;
+    }
+    th {
+      background-color: #2c2c2c;
+    }
+  </style>
+</head>
+<body>
+  <h1>Kirtoxa Admin Panel</h1>
+
+  <div id="login" class="container">
+    <h2>Admin Login</h2>
+    <input type="text" id="username" placeholder="Username" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+    <div class="status" id="loginStatus"></div>
+  </div>
+
+  <div id="panel" class="container hidden">
+    <h2>Generate License Key</h2>
+    <button onclick="generateKey()">Generate Random Key</button>
+    <input type="text" id="genKey" placeholder="Key will appear here..." readonly />
+
+    <h2>Add License Key</h2>
+    <input type="text" id="addKey" placeholder="XXXX-YYYY-ZZZZ" />
+    <input type="number" id="days" placeholder="Expires in Days (optional)" />
+    <button onclick="addKey()">Add Key</button>
+    <div class="status" id="addStatus"></div>
+
+    <h2>Revoke License Key</h2>
+    <input type="text" id="revokeKey" placeholder="XXXX-YYYY-ZZZZ" />
+    <button onclick="revokeKey()">Revoke Key</button>
+    <div class="status" id="revokeStatus"></div>
+
+    <h2>Search Keys</h2>
+    <input type="text" id="searchBox" onkeyup="filterKeys()" placeholder="Search by key or HWID" />
+    <table>
+      <thead>
+        <tr>
+          <th>Key</th>
+          <th>HWID</th>
+          <th>Expires</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="keyTable"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const SERVER = "";
+    const ADMIN_USER = "admin";
+    const ADMIN_PASS = "kirtoxa123";
+
+    function login() {
+      const user = document.getElementById('username').value;
+      const pass = document.getElementById('password').value;
+      if (user === ADMIN_USER && pass === ADMIN_PASS) {
+        document.getElementById('login').classList.add('hidden');
+        document.getElementById('panel').classList.remove('hidden');
+        loadKeys();
+      } else {
+        document.getElementById('loginStatus').textContent = 'Invalid login credentials.';
+      }
+    }
+
+    function generateKey() {
+      const part = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+      const key = `${part()}-${part()}-${part()}`;
+      document.getElementById('genKey').value = key;
+      document.getElementById('addKey').value = key;
+    }
+
+    async function addKey() {
+      const key = document.getElementById('addKey').value.trim();
+      const days = parseInt(document.getElementById('days').value);
+      const expires = days ? Math.floor(Date.now() / 1000) + days * 86400 : null;
+
+      const res = await fetch(`/admin/add_key`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, expires })
+      });
+
+      const data = await res.json();
+      document.getElementById('addStatus').textContent = `Response: ${data.status}`;
+      loadKeys();
+    }
+
+    async function revokeKey() {
+      const key = document.getElementById('revokeKey').value.trim();
+
+      const res = await fetch(`/admin/revoke_key`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key })
+      });
+
+      const data = await res.json();
+      document.getElementById('revokeStatus').textContent = `Response: ${data.status}`;
+      loadKeys();
+    }
+
+    async function loadKeys() {
+      const res = await fetch(`/admin/list_keys`);
+      const data = await res.json();
+      const table = document.getElementById('keyTable');
+      table.innerHTML = '';
+      data.forEach(entry => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${entry.key}</td>
+          <td>${entry.hwid || 'Unassigned'}</td>
+          <td>${entry.expires ? new Date(entry.expires * 1000).toLocaleDateString() : 'Lifetime'}</td>
+          <td>${entry.status}</td>
+          <td><button onclick="resetHWID('${entry.key}')">Reset HWID</button></td>
+        `;
+        table.appendChild(tr);
+      });
+    }
+
+    function filterKeys() {
+      const input = document.getElementById('searchBox').value.toLowerCase();
+      const rows = document.querySelectorAll('#keyTable tr');
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(input) ? '' : 'none';
+      });
+    }
+
+    async function resetHWID(key) {
+      await fetch(`/admin/reset_hwid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key })
+      });
+      loadKeys();
+    }
+  </script>
+</body>
+</html>
