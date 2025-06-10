@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: kirtoxa-license-server
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: "python3 server.py"
+    envVars:
+      - key: FLASK_ENV
+        value: production
