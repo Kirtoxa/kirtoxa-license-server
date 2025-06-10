@@ -14,6 +14,10 @@ def load_licenses():
 
 licenses = load_licenses()
 
+@app.route("/", methods=["GET"])
+def home():
+    return "Kirtoxa License Server is running."
+
 @app.route("/validate", methods=["POST"])
 def validate():
     data = request.get_json()
