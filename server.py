@@ -1,5 +1,5 @@
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import json
 import os
 
@@ -21,6 +21,10 @@ licenses = load_licenses()
 @app.route("/", methods=["GET"])
 def home():
     return "Kirtoxa License Server is running."
+
+@app.route("/admin")
+def admin_panel():
+    return send_from_directory(".", "index.html")
 
 @app.route("/validate", methods=["POST"])
 def validate():
