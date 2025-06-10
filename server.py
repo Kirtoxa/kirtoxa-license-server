@@ -1,16 +1,20 @@
 
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import json
+import os
 
 app = Flask(__name__)
+LICENSE_FILE = "licenses.json"
 
-# Load licenses from file
 def load_licenses():
-    try:
-        with open("licenses.json", "r") as f:
+    if os.path.exists(LICENSE_FILE):
+        with open(LICENSE_FILE, "r") as f:
             return json.load(f)
-    except:
-        return {}
+    return {}
+
+def save_licenses(data):
+    with open(LICENSE_FILE, "w") as f:
+        json.dump(data, f, indent=4)
 
 licenses = load_licenses()
 
@@ -32,8 +36,32 @@ def validate():
             return "valid"
         else:
             return "hwid_mismatch"
-    else:
-        return "invalid"
+    return "invalid"
+
+@app.route("/admin/add_key", methods=["POST"])
+def add_key():
+    data = request.get_json()
+    key = data.get("key")
+    hwid = data.get("hwid", "")
+    if not key:
+        return "Missing key", 400
+    licenses[key] = {"hwid": hwid}
+    save_licenses(licenses)
+    return "added"
+
+@app.route("/admin/revoke_key", methods=["POST"])
+def revoke_key():
+    data = request.get_json()
+    key = data.get("key")
+    if key in licenses:
+        del licenses[key]
+        save_licenses(licenses)
+        return "revoked"
+    return "not found", 404
+
+@app.route("/admin/list_keys", methods=["GET"])
+def list_keys():
+    return jsonify(licenses)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3000)
