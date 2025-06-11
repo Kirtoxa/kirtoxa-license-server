@@ -1,0 +1,118 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kirtoxa License Admin</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f8f8;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    input, button {
+      padding: 8px;
+      margin: 6px 0;
+      border-radius: 5px;
+      border: none;
+    }
+    input {
+      width: 300px;
+      background-color: #2c2c2c;
+      color: white;
+    }
+    button {
+      background-color: #9b59b6;
+      color: white;
+      cursor: pointer;
+      width: 150px;
+    }
+    .section {
+      margin-bottom: 30px;
+    }
+    .key-entry {
+      background: #1e1e1e;
+      padding: 8px;
+      margin: 5px 0;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h2 style="color:#9b59b6">Kirtoxa Admin Panel</h2>
+
+  <div class="section">
+    <h3>Add License Key</h3>
+    <input id="newKey" placeholder="XXXX-YYYY-ZZZZ"><br>
+    <input id="newHWID" placeholder="HWID"><br>
+    <button onclick="addKey()">Add Key</button>
+    <p id="addResponse"></p>
+  </div>
+
+  <div class="section">
+    <h3>Revoke License Key</h3>
+    <input id="revokeKey" placeholder="XXXX-YYYY-ZZZZ"><br>
+    <button onclick="revokeKey()">Revoke Key</button>
+    <p id="revokeResponse"></p>
+  </div>
+
+  <div class="section">
+    <h3>All Keys</h3>
+    <button onclick="listKeys()">Refresh List</button>
+    <input id="filter" placeholder="Search key or HWID..." oninput="filterKeys()"><br>
+    <div id="keyList"></div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+
+    async function addKey() {
+      const key = document.getElementById("newKey").value.trim();
+      const hwid = document.getElementById("newHWID").value.trim();
+      const res = await fetch(API_BASE + "/admin/add_key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, hwid })
+      });
+      const txt = await res.text();
+      document.getElementById("addResponse").innerText = "Response: " + txt;
+      listKeys();
+    }
+
+    async function revokeKey() {
+      const key = document.getElementById("revokeKey").value.trim();
+      const res = await fetch(API_BASE + "/admin/revoke_key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key })
+      });
+      const txt = await res.text();
+      document.getElementById("revokeResponse").innerText = "Response: " + txt;
+      listKeys();
+    }
+
+    async function listKeys() {
+      const res = await fetch(API_BASE + "/admin/list_keys");
+      const keys = await res.json();
+      const list = document.getElementById("keyList");
+      list.innerHTML = "";
+      for (const [key, data] of Object.entries(keys)) {
+        const div = document.createElement("div");
+        div.className = "key-entry";
+        div.textContent = key + " → HWID: " + data.hwid;
+        list.appendChild(div);
+      }
+    }
+
+    function filterKeys() {
+      const term = document.getElementById("filter").value.toLowerCase();
+      const items = document.querySelectorAll(".key-entry");
+      items.forEach(div => {
+        div.style.display = div.textContent.toLowerCase().includes(term) ? "" : "none";
+      });
+    }
+
+    listKeys(); // auto-load on page open
+  </script>
+</body>
+</html>
