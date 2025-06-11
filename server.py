@@ -24,7 +24,7 @@ def home():
 
 @app.route("/admin")
 def admin_panel():
-    return send_from_directory("static", "index.html")
+    return send_from_directory(".", "index.html")
 
 @app.route("/validate", methods=["POST"])
 def validate():
