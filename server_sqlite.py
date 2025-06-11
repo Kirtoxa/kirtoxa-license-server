@@ -1,5 +1,4 @@
-
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import sqlite3
 import datetime
@@ -83,6 +82,10 @@ def list_keys():
     rows = c.fetchall()
     conn.close()
     return jsonify([{"key": r[0], "hwid": r[1], "expiration": r[2]} for r in rows])
+
+@app.route("/download-db", methods=["GET"])
+def download_db():
+    return send_file("licenses.db", as_attachment=True)
 
 if __name__ == "__main__":
     init_db()
